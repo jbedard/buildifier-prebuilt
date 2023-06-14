@@ -16,12 +16,25 @@ buildozer_binary = _buildozer_binary
 def _buildifier_impl(ctx):
     return [buildifier_impl_factory(ctx, test_rule = False)]
 
-buildifier = rule(
+_buildifier = rule(
     implementation = _buildifier_impl,
     attrs = buildifier_attr_factory(test_rule = False),
     toolchains = ["@buildifier_prebuilt//buildifier:toolchain"],
     executable = True,
 )
+
+def buildifier(**kwargs):
+    target_compatible_with = kwargs.pop("target_compatible_with", select({
+        # stardoc produces different line endings on Windows
+        # which makes the diff_test fail
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }))
+
+    _buildifier(
+        target_compatible_with = target_compatible_with,
+        **kwargs,
+    )
 
 def _buildifier_test_impl(ctx):
     return [buildifier_impl_factory(ctx, test_rule = True)]
@@ -48,4 +61,15 @@ def buildifier_test(**kwargs):
             if t not in tags:
                 tags.append(t)
         kwargs["tags"] = tags
-    _buildifier_test(**kwargs)
+
+    target_compatible_with = kwargs.pop("target_compatible_with", select({
+        # stardoc produces different line endings on Windows
+        # which makes the diff_test fail
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }))
+
+    _buildifier_test(
+        target_compatible_with = target_compatible_with,
+        **kwargs,
+    )
